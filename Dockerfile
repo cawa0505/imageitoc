@@ -1,15 +1,16 @@
-FROM centos:6
-MAINTAINER holishing
+FROM centos:7
+LABEL maintainer="jimmyyen"
 
 RUN groupadd --gid 9999 bbs \
     && useradd -g bbs -s /bin/bash --uid 9999 bbs \
     && rm /etc/localtime \
     && ln -s /usr/share/zoneinfo/Asia/Taipei /etc/localtime
 
-RUN rpm --import http://mirror.centos.org/centos/6/os/x86_64/RPM-GPG-KEY-CentOS-6 \
+RUN rpm --import http://mirror.centos.org/centos/7/os/x86_64/RPM-GPG-KEY-CentOS-7 \
     && yum update -y    \
     && yum clean all \
     && yum install -y \
+                epel-release git python3 \
                 gcc   \
                 make  \
                 patch \
@@ -17,7 +18,9 @@ RUN rpm --import http://mirror.centos.org/centos/6/os/x86_64/RPM-GPG-KEY-CentOS-
                 glibc-devel.i686 \
                 libgcc.i686 \
                 libstdc++-devel.i686 \
-                ncurses-devel.i686
+                ncurses-devel.i686 \
+                crontabs
+
 
 USER bbs
 ENV HOME=/home/bbs
@@ -33,6 +36,18 @@ COPY file/config_h /home/bbs/src/include/config.h
 RUN patch -p1 -d /home/bbs/src </home/bbs/patch/patch-for64bit-Makefile
 RUN cd /home/bbs/src && make linux install clean
 
-# Notice, in here, mbbsd started service and PROVIDE BIG5 encoding for users.
-CMD ["sh","-c","/home/bbs/bin/account &&  /home/bbs/bin/camera && /home/bbs/bin/bbsd 8888 && while true; do sleep 10; done"]
+USER root
+ADD ./file/crontab /tmp/crontab
+ADD ./file/runbbsd.sh /runbbsd.sh
+RUN chmod 0755 /runbbsd.sh
+
+WORKDIR /home/bbs
+RUN git clone https://github.com/novnc/websockify.git websockify \
+    && cd websockify \
+    && pip3 install numpy==1.19 \
+    && python3 setup.py install
+
+CMD ["sh","-c","/runbbsd.sh"]
+
 EXPOSE 8888
+EXPOSE 46783

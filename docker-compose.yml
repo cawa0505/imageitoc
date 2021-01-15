@@ -1,0 +1,14 @@
+version: "3.5"
+
+services:
+  itocbbs:
+    image: bbsdocker/imageitoc
+    container_name: itocbbs
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+      - "46783:46783"
+
